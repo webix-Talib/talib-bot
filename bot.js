@@ -11,16 +11,47 @@ const exifr = require('exifr'); // For metadata extraction
 const FormData = require('form-data');
 const triviaState = {}; // Object to hold active trivia games in different chats
 
+const app = express();
+const PORT = process.env.PORT || 3000;
+// Azure needs an HTTP endpoint
+app.get('/', (req, res) => {
+    res.send('✅ WhatsApp Bot is running on Azure!');
+});
+
+const CHROMIUM_PATH = process.env.CHROMIUM_PATH || require('puppeteer').executablePath();
+
 const client = new Client({
-    authStrategy: new LocalAuth(),
+    authStrategy: new LocalAuth({
+        dataPath: './.wwebjs_auth' // store session data persistently in Azure
+    }),
     puppeteer: {
-        headless: false, // for debugging
-        args: ['--no-sandbox', '--disable-setuid-sandbox']
+        headless: true,
+        executablePath: CHROMIUM_PATH,
+        args: [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-gpu',
+            '--single-process'
+        ]
     }
 });
 
 client.on('qr', qr => qrcode.generate(qr, { small: true }));
 client.on('ready', () => console.log('✅ Bot is ready!'));
+client.on('message', async msg => {
+    if (msg.body.toLowerCase() === '!ping') {
+        await msg.reply('Pong 🏓');
+    }
+    // You can add more bot commands here
+});
+
+client.initialize();
+
+// Start Express server (Azure will ping this)
+app.listen(PORT, () => {
+    console.log(`🌐 Server running on port ${PORT}`);
+});
 
 const OWNER_NUMBER = process.env.OWNER_NUMBER?.replace('+', '');
 const YT_API_KEY = process.env.YT_API_KEY;
@@ -37,17 +68,19 @@ client.on('message', async msg => {
     const sender = rawSender.split('@')[0];
     const owner = (process.env.OWNER_NUMBER || '').replace(/\D/g, '');
     const isOwner = sender === owner;
+    const body = msg.body.toLowerCase();
 
     if (command === '!menu') {
         msg.reply(`*╔═══『 🤖 WhatsApp Bot Menu 』═══╗*
 
 🎥 *YouTube & Media*
 ┃🔍 *!yt <search>* – Search YouTube  
-┃🎵 *!mp3 <yt-link>* – Download MP3    
+┃🎵 *!mp3 <yt-link>* – Download MP3
 ┃🖼️ *!sticker* – Convert image/video to sticker  
 ┃🚫 *!removebg* – Remove background from image  
 ┃🖼️ *!img5 <query>* – Get 5 image results of anything
 🎥 *!imdb <movie>* – Get movie/TV show info
+*!transcribe* – Reply to a voice/audio to get text
 
 
 🗣️ *Voice & AI*
@@ -59,6 +92,7 @@ client.on('message', async msg => {
 ┃📖 *!define <word>* – Get dictionary definition 
 ┃🧮 *!math <expression>* – Math calculator  
 🧠 *!trivia* – Start a new trivia game
+┃🧠*!fact* – Get random fact
 
 👥 *Group Utilities*
 ┃🏷️ *!tagall* – Mention all members  
@@ -85,12 +119,37 @@ client.on('message', async msg => {
 ┃📥 *!instadl <link>* – Download Instagram media
 ┃📷 *!hiddeninfo* – Extract hidden metadata from image
 ┃⏳ *!delayedmsg <time> | <message>* – Schedule a message
+┃🧮 *!age*
+┃   *!flip*
+┃ *!country <name>* – Get Country info
 
 *╚══════════════════════════╝*
 📜 Use any command above directly here.  
 💬 Type *!menu* anytime to view this list again.`);
     }
 
+    if (body.startsWith('!hackcode')) {
+        const mentions = await msg.getMentions();
+        const mentionName = mentions.length > 0
+            ? mentions[0].pushname || mentions[0].id.user
+            : msg.body.split(' ')[1] || 'User';
+
+        const steps = [
+            `🛠️ Initializing hack on ${mentionName}...`,
+            `🔍 Finding IP address...`,
+            `📡 Connecting to server...`,
+            `📥 Downloading chats...`,
+            `📤 Uploading to dark web...`,
+            `💀 Planting virus...`,
+            `✅ Hack on ${mentionName} completed!`,
+            `🤣 Just kidding! ${mentionName} is safe.`
+        ];
+
+        for (let step of steps) {
+            await msg.reply(step);
+            await new Promise(resolve => setTimeout(resolve, 1500));
+        }
+    }
 
     //NSFW image generation command
     if (command === '!nsfw') {
@@ -119,11 +178,34 @@ client.on('message', async msg => {
         });
     }
 
-      // Trivia command
+    if (command === '!country') {
+        const country = msg.body.split(' ').slice(1).join(' ');
+        if (!country) return msg.reply('❗ Usage: !country <country-name>');
+
+        const fetch = (await import('node-fetch')).default;
+        try {
+            const res = await fetch(`https://restcountries.com/v3.1/name/${encodeURIComponent(country)}?fullText=true`);
+            if (!res.ok) return msg.reply(`❌ Country not found.`);
+
+            const data = await res.json();
+            const c = data[0];
+            msg.reply(
+                `🌍 *${c.name.common}*\n` +
+                `Capital: ${c.capital?.[0] || 'N/A'}\n` +
+                `Region: ${c.region}\n` +
+                `Population: ${c.population.toLocaleString()}`
+            );
+        } catch (e) {
+            msg.reply('❌ Could not fetch country info.');
+        }
+    }
+
+
+    // Trivia command
     if (command === '!trivia') {
         const chat = await msg.getChat();
         const chatId = chat.id._serialized;
-        
+
         // If a game is already in progress in this chat, don't start a new one
         if (triviaState[chatId] && triviaState[chatId].active) {
             return msg.reply('❌ A trivia game is already in progress in this chat!');
@@ -137,55 +219,55 @@ client.on('message', async msg => {
             if (!questionData) {
                 return msg.reply('❌ Could not fetch a trivia question.');
             }
-            
+
             // Store the question and correct answer in the state
             triviaState[chatId] = {
                 active: true,
                 correctAnswer: questionData.correct_answer,
                 allAnswers: [...questionData.incorrect_answers, questionData.correct_answer].sort(() => Math.random() - 0.5)
             };
-            
+
             const allAnswers = triviaState[chatId].allAnswers;
-            
+
             // Format the question and answers for display
             let questionText = `🧠 *Trivia Question!* 🧠\n\n`;
             questionText += `*Category:* ${questionData.category}\n`;
             questionText += `*Difficulty:* ${questionData.difficulty.charAt(0).toUpperCase() + questionData.difficulty.slice(1)}\n\n`;
             questionText += `*Q:* ${questionData.question}\n\n`;
-            
+
             allAnswers.forEach((answer, index) => {
                 questionText += `*${index + 1}.* ${answer}\n`;
             });
-            
+
             questionText += `\n_Reply with the number of your answer! (e.g., 1)_`;
-            
+
             // Send the question
             await msg.reply(questionText);
-        
+
         } catch (error) {
             console.error('Trivia API error:', error.message);
             delete triviaState[chatId]; // Clean up state if there's an error
             msg.reply('❌ Failed to fetch a trivia question. Please try again.');
         }
     }
-    
+
     // Listen for replies to an active trivia game
     if (triviaState[msg.from] && triviaState[msg.from].active) {
         const chatId = msg.from;
         const userAnswer = parseInt(msg.body.trim());
-        
+
         // Check if the user's reply is a number between 1 and 4
         if (!isNaN(userAnswer) && userAnswer >= 1 && userAnswer <= 4) {
-            
+
             const state = triviaState[chatId];
             const selectedAnswer = state.allAnswers[userAnswer - 1];
-            
+
             if (selectedAnswer === state.correctAnswer) {
                 msg.reply(`✅ Correct! The answer was: ${state.correctAnswer}`);
             } else {
                 msg.reply(`❌ Wrong! The correct answer was: ${state.correctAnswer}`);
             }
-            
+
             // End the game for this chat
             delete triviaState[chatId];
         }
@@ -248,11 +330,11 @@ client.on('message', async msg => {
             }
             reply += `\n\n*Type:* ${meaning.partOfSpeech}`;
             reply += `\n*Meaning:* ${definition.definition}`;
-            
+
             if (definition.example) {
                 reply += `\n\n*Example:* _"${definition.example}"_`;
             }
-            
+
             msg.reply(reply);
         } catch (error) {
             if (error.response && error.response.status === 404) {
@@ -267,9 +349,9 @@ client.on('message', async msg => {
     // Command: Cryptocurrency Price
     if (command === '!crypto') {
         if (args.length < 1) return msg.reply('❗ Usage: `!crypto <symbol>`\nExample: `!crypto btc`');
-        
+
         const cryptoSymbol = args[0].toLowerCase();
-        
+
         // A helper to map common symbols to the API's required IDs
         const coinIds = {
             'btc': 'bitcoin',
@@ -289,7 +371,7 @@ client.on('message', async msg => {
 
         try {
             const { data } = await axios.get(`https://api.coingecko.com/api/v3/simple/price?ids=${coinId}&vs_currencies=usd,inr&include_24hr_change=true`);
-            
+
             const priceData = data[coinId];
             if (!priceData) return msg.reply('❌ Could not fetch price data.');
 
@@ -486,15 +568,49 @@ client.on('message', async msg => {
         }
     }
 
+    if (command === '!ping') {
+        const start = Date.now();
+        msg.reply('🏓 Pong!').then(() => {
+            const end = Date.now();
+            msg.reply(`⏱ Response Time: *${end - start}ms*`);
+        });
+    }
+
+    if (command === '!fact') {
+        try {
+            const res = await axios.get('https://uselessfacts.jsph.pl/random.json?language=en');
+            msg.reply(`📢 Fact: ${res.data.text}`);
+        } catch {
+            msg.reply('❌ Could not fetch a fact.');
+        }
+    }
+
 
     if (command === '!math') {
         const expression = msg.body.slice(6).trim();
+        if (!expression) return msg.reply('❗ Usage: !math <expression>\nExample: !math 5+3*2');
         try {
-            const result = eval(expression.replace(/[^-()\d/*+.]/g, ''));
-            msg.reply(`🧮 Result: ${result}`);
+            // Security: Allow only numbers and operators
+            if (!/^[0-9+\-*/().\s]+$/.test(expression)) return msg.reply('❌ Invalid expression.');
+            const result = eval(expression);
+            msg.reply(`🧮 Result: *${result}*`);
         } catch {
-            msg.reply('❌ Invalid math expression.');
+            msg.reply('❌ Error calculating.');
         }
+    }
+    if (command === '!age') {
+        const dateStr = msg.body.split(' ')[1];
+        if (!dateStr) return msg.reply('❗ Usage: !age <YYYY-MM-DD>');
+        const birthDate = new Date(dateStr);
+        if (isNaN(birthDate)) return msg.reply('❌ Invalid date format.');
+        const age = new Date().getFullYear() - birthDate.getFullYear();
+        msg.reply(`🎂 You are ${age} years old.`);
+    }
+
+
+    if (command === '!flip') {
+        const result = Math.random() < 0.5 ? '🪙 Heads' : '🪙 Tails';
+        msg.reply(result);
     }
 
     if (command === '!wiki') {
@@ -598,10 +714,17 @@ client.on('message', async msg => {
 
     if (command === '!tts') {
         const parts = msg.body.trim().split(' ');
-        const lang = parts[1];
-        const text = parts.slice(2).join(' ');
+        let lang = parts[1];
+        let text = parts.slice(2).join(' ');
 
-        if (!lang || !text) {
+        // If no language code provided, default to 'en'
+        if (!text) {
+            // Means user typed "!tts <text>" without a language
+            lang = 'en';
+            text = parts.slice(1).join(' ');
+        }
+
+        if (!text) {
             return msg.reply('❗ Usage: !tts <lang-code> <text>\nExample: !tts hi Namaste Duniya');
         }
 
