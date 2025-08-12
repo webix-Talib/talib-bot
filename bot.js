@@ -5,37 +5,59 @@ const axios = require('axios');
 const googleTTS = require('google-tts-api');
 const fs = require('fs');
 const path = require('path');
+const puppeteer = require('puppeteer');
 const { exec } = require('child_process');
 const ffmpeg = require('fluent-ffmpeg');
 const exifr = require('exifr'); // For metadata extraction
 const FormData = require('form-data');
+const express = require('express');
 const triviaState = {}; // Object to hold active trivia games in different chats
-
 const app = express();
 const PORT = process.env.PORT || 3000;
 // Azure needs an HTTP endpoint
 app.get('/', (req, res) => {
     res.send('✅ WhatsApp Bot is running on Azure!');
 });
+//Detect Chrome path
+let CHROME_PATH;
 
-const CHROMIUM_PATH = process.env.CHROMIUM_PATH || require('puppeteer').executablePath();
+if (process.env.CHROMIUM_PATH) {
+    CHROME_PATH = process.env.CHROMIUM_PATH;
+} else if (process.platform === 'win32') {
+    CHROME_PATH = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
+} else {
+    CHROME_PATH = '/usr/bin/chromium-browser';
+}
+
+console.log("Using Chrome path:", CHROME_PATH);
 
 const client = new Client({
     authStrategy: new LocalAuth({
-        dataPath: './.wwebjs_auth' // store session data persistently in Azure
+        dataPath: './.wwebjs_auth'
     }),
     puppeteer: {
-        headless: true,
-        executablePath: CHROMIUM_PATH,
+        headless: false, // Keep false so QR is visible
+        executablePath: CHROME_PATH,
         args: [
             '--no-sandbox',
             '--disable-setuid-sandbox',
             '--disable-dev-shm-usage',
             '--disable-gpu',
-            '--single-process'
+            '--disable-extensions',
+            '--disable-background-timer-throttling',
+            '--disable-backgrounding-occluded-windows',
+            '--disable-breakpad',
+            '--disable-component-extensions-with-background-pages',
+            '--disable-features=TranslateUI,BlinkGenPropertyTrees',
+            '--disable-ipc-flooding-protection',
+            '--disable-renderer-backgrounding',
+            '--enable-features=NetworkService,NetworkServiceInProcess',
+            '--force-color-profile=srgb',
+            '--window-size=1280,800'
         ]
     }
 });
+
 
 client.on('qr', qr => qrcode.generate(qr, { small: true }));
 client.on('ready', () => console.log('✅ Bot is ready!'));
@@ -43,10 +65,8 @@ client.on('message', async msg => {
     if (msg.body.toLowerCase() === '!ping') {
         await msg.reply('Pong 🏓');
     }
-    // You can add more bot commands here
+    
 });
-
-client.initialize();
 
 // Start Express server (Azure will ping this)
 app.listen(PORT, () => {

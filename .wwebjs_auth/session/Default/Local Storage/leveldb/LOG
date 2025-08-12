@@ -1,3 +1,6 @@
-2025/08/11-20:05:02.895 115c Reusing MANIFEST C:\alexer\whatsapp-bot\.wwebjs_auth\session\Default\Local Storage\leveldb/MANIFEST-000001
-2025/08/11-20:05:02.951 115c Recovering log #16
-2025/08/11-20:05:02.961 115c Reusing old log C:\alexer\whatsapp-bot\.wwebjs_auth\session\Default\Local Storage\leveldb/000016.log 
+2025/08/12-21:23:37.470 3438 Reusing MANIFEST C:\alexer\whatsapp-bot\.wwebjs_auth\session\Default\Local Storage\leveldb/MANIFEST-000001
+2025/08/12-21:23:37.479 3438 Recovering log #16
+2025/08/12-21:23:37.481 3438 Reusing old log C:\alexer\whatsapp-bot\.wwebjs_auth\session\Default\Local Storage\leveldb/000016.log 
+2025/08/12-21:25:38.262 5518 Level-0 table #20: started
+2025/08/12-21:25:38.266 5518 Level-0 table #20: 16456 bytes OK
+2025/08/12-21:25:38.268 5518 Delete type=0 #16
