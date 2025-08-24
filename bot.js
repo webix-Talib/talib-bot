@@ -517,8 +517,10 @@ client.on('message', async msg => {
 
 • 👤 *Name:* Md Talib  
 • 💻 *System:* Asus F17  
+•  *GitHub:* https://github.com/[webix-Talib]
+•  *Instagram:* https://instagram.com/[codecguy01]
 • 📱 *Mobile:* +91 83031 84622  
-• 🧠 *Developer:* WebDev + AI Automation  
+• 🧠 *Developer:* WebDev + AI Automation/Machine Learning
 `);
     }
 
