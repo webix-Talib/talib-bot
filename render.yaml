@@ -3,9 +3,14 @@ services:
     name: whatsapp-bot
     env: node
     plan: free
-    buildCommand: npm install
+    buildCommand: |
+      apt-get update
+      apt-get install -y chromium-browser
+      npm install
     startCommand: node bot.js
     envVars:
       - key: NODE_ENV
         value: production
+      - key: CHROMIUM_PATH
+        value: /usr/bin/chromium-browser
     autoDeploy: true

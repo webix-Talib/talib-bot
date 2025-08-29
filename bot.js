@@ -26,18 +26,21 @@ const client = new Client({
     }),
     puppeteer: {
         headless: true, // required in Render
-        executablePath: process.env.CHROME_PATH || '/usr/bin/google-chrome-stable',
+        executablePath: process.env.CHROME_PATH || process.env.CHROMIUM_PATH || '/usr/bin/chromium-browser' || '/usr/bin/google-chrome-stable',
         args: [
             '--no-sandbox',
             '--disable-setuid-sandbox',
             '--disable-dev-shm-usage',
             '--disable-gpu',
-            '--disable-extensions'
+            '--disable-extensions',
+            '--disable-background-timer-throttling',
+            '--disable-backgrounding-occluded-windows',
+            '--disable-renderer-backgrounding'
         ]
     }
 });
 
-console.log("Using Puppeteer Chromium path:", process.env.CHROME_PATH || '/usr/bin/google-chrome-stable');
+console.log("Using Puppeteer Chromium path:", process.env.CHROME_PATH || process.env.CHROMIUM_PATH || '/usr/bin/chromium-browser');
 
 client.on('qr', qr => qrcode.generate(qr, { small: true }));
 client.on('ready', () => console.log('✅ Bot is ready!'));
