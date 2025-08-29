@@ -20,36 +20,24 @@ app.get('/', (req, res) => {
 });
 
 // Use Puppeteer’s Chromium instead of system path
-const CHROME_PATH = puppeteer.executablePath();
-console.log("Using Puppeteer Chromium path:", CHROME_PATH);
-
 const client = new Client({
     authStrategy: new LocalAuth({
         dataPath: './.wwebjs_auth'
     }),
     puppeteer: {
-        headless: true, // Render/Azure doesn't allow non-headless
-        executablePath: CHROME_PATH,
+        headless: true, // required in Render
+        executablePath: process.env.CHROME_PATH || '/usr/bin/google-chrome-stable',
         args: [
             '--no-sandbox',
             '--disable-setuid-sandbox',
             '--disable-dev-shm-usage',
             '--disable-gpu',
-            '--disable-extensions',
-            '--disable-background-timer-throttling',
-            '--disable-backgrounding-occluded-windows',
-            '--disable-breakpad',
-            '--disable-component-extensions-with-background-pages',
-            '--disable-features=TranslateUI,BlinkGenPropertyTrees',
-            '--disable-ipc-flooding-protection',
-            '--disable-renderer-backgrounding',
-            '--enable-features=NetworkService,NetworkServiceInProcess',
-            '--force-color-profile=srgb',
-            '--window-size=1280,800'
+            '--disable-extensions'
         ]
     }
 });
 
+console.log("Using Puppeteer Chromium path:", process.env.CHROME_PATH || '/usr/bin/google-chrome-stable');
 
 client.on('qr', qr => qrcode.generate(qr, { small: true }));
 client.on('ready', () => console.log('✅ Bot is ready!'));
