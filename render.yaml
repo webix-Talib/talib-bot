@@ -1,12 +1,15 @@
 services:
   - type: worker
     name: whatsapp-bot
-    env: docker
+    env: node
     plan: free
-    dockerfilePath: ./Dockerfile
+    buildCommand: npm install && npx puppeteer browsers install chrome
+    startCommand: node bot.js
     envVars:
       - key: NODE_ENV
         value: production
       - key: PUPPETEER_SKIP_CHROMIUM_DOWNLOAD
         value: true
+      - key: PUPPETEER_CACHE_DIR
+        value: /opt/render/project/.cache/puppeteer
     autoDeploy: true

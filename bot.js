@@ -26,7 +26,7 @@ const client = new Client({
     }),
     puppeteer: {
         headless: true, // required in Render
-        executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/google-chrome-stable',
+        executablePath: process.env.PUPPETEER_EXECUTABLE_PATH,
         args: [
             '--no-sandbox',
             '--disable-setuid-sandbox',
@@ -42,7 +42,7 @@ const client = new Client({
     }
 });
 
-console.log("Using Puppeteer Chromium path:", process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/google-chrome-stable');
+console.log("Using Puppeteer Chromium path:", process.env.PUPPETEER_EXECUTABLE_PATH || 'auto-detected');
 
 client.on('qr', qr => qrcode.generate(qr, { small: true }));
 client.on('ready', () => console.log('✅ Bot is ready!'));
