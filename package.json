@@ -5,7 +5,7 @@
   "main": "bot.js",
   "scripts": {
     "start": "node bot.js",
-    "postinstall": "puppeteer install"
+    "postinstall": "echo 'Skipping Chromium download'"
   },
   "keywords": [
     "whatsapp",
@@ -30,6 +30,6 @@
     "wikipedia": "^2.1.2"
   },
   "engines": {
-    "node": "20.x"
+    "node": "18.x"
   }
 }
