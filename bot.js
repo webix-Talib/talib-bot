@@ -14,29 +14,21 @@ const express = require('express');
 const triviaState = {}; // Object to hold active trivia games in different chats
 const app = express();
 const PORT = process.env.PORT || 3000;
-// Azure needs an HTTP endpoint
+// Render needs an HTTP endpoint
 app.get('/', (req, res) => {
-    res.send('✅ WhatsApp Bot is running on Azure!');
+    res.send('✅ WhatsApp Bot is running on render');
 });
-//Detect Chrome path
-let CHROME_PATH;
 
-if (process.env.CHROMIUM_PATH) {
-    CHROME_PATH = process.env.CHROMIUM_PATH;
-} else if (process.platform === 'win32') {
-    CHROME_PATH = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
-} else {
-    CHROME_PATH = '/usr/bin/chromium-browser';
-}
-
-console.log("Using Chrome path:", CHROME_PATH);
+// Use Puppeteer’s Chromium instead of system path
+const CHROME_PATH = puppeteer.executablePath();
+console.log("Using Puppeteer Chromium path:", CHROME_PATH);
 
 const client = new Client({
     authStrategy: new LocalAuth({
         dataPath: './.wwebjs_auth'
     }),
     puppeteer: {
-        headless: false, // Keep false so QR is visible
+        headless: true, // Render/Azure doesn't allow non-headless
         executablePath: CHROME_PATH,
         args: [
             '--no-sandbox',
